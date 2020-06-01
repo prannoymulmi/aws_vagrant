@@ -36,12 +36,6 @@ https://www.vagrantup.com/downloads.html (be sure to disable Hyper-V on Windows 
 
 3. Navigate into "vagrant-run\vagrant-setup" then run ```vagrant up``` and afterwards ```vagrant ssh```
 
-#### Run the aws-configure.sh
-This must be done in the running vagrant machine. Check the Vagrant  [Vagrant Doc](vagrant-run/README.md) how to start vagrant.
-
-
-After a successful login one can call the AWS API, given that the person has the corresponding access to the resources.
-
 
 ### What we need & what we automated:
 * Terraform
