@@ -1,0 +1,18 @@
+alias ll='ls -alF'
+alias tf='terraform'
+
+#docker
+alias docker_kill_all='docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q)'
+
+# git
+alias gpr='git pull --rebase'
+alias gp='git push'
+alias gs='git stash'
+
+#dos2unix recursive in the whole folder
+alias d2u='find . -type f -print0 | xargs -0 dos2unix'
+
+# add ssh private Key to ssh-agent
+alias ssh_add_key='if [ -z ${SSH_AGENT_PID} ]; then eval $(ssh-agent -s) ; fi && ssh-add && ssh-add -l'
+
+

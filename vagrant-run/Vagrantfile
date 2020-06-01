@@ -1,0 +1,203 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+## Load a Yaml file which contains a user specific configurations
+require 'yaml'
+
+current_dir    = File.dirname(File.expand_path(__FILE__))
+configs        = YAML.load_file("#{current_dir}/config.yaml")
+vagrant_config = configs['configs'][configs['configs']['use']]
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure(2) do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+  config.vm.box = "ubuntu/bionic64"
+  config.vm.box_download_insecure = true
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  # config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  config.vm.network "private_network", ip: "192.168.33.10"
+
+  # config.vm.network "forwarded_port", guest: 8080, host: 8080, host_ip: "127.0.0.1" # Spring Boot
+  config.vm.network "forwarded_port", guest: 9324, host: 9324, host_ip: "127.0.0.1" # elasticmq
+  config.vm.network "forwarded_port", guest: 8000, host: 8000, host_ip: "127.0.0.1" # dynamodb
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network "public_network"
+
+    # Configuring VM hostname
+    config.vm.hostname = "aws-vagrant"
+    config.vm.define "aws-vagrant"
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  # config.vm.synced_folder "../data", "/vagrant_data"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+  config.vm.provider "virtualbox" do |vb|
+    # Display the VirtualBox GUI when booting the machine
+    vb.gui = false
+    # Customize the amount of memory on the VM:
+    vb.memory = "2048"
+  end
+  #
+  # View the documentation for the provider you are using for more
+  # information on available options.
+
+  # Define a Vagrant Push strategy for pushing to Atlas. Other push strategies
+  # such as FTP and Heroku are also available. See the documentation at
+  # https://docs.vagrantup.com/v2/push/atlas.html for more information.
+  # config.push.define "atlas" do |push|
+  #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
+  # end
+
+  # Provisioning
+
+  # keep repos in sync
+  # link HOST directory to VM directory
+  config.vm.synced_folder vagrant_config['aws_vagrant_project_source_path'], vagrant_config['aws_vagrant_project_destination_path']
+
+  config.vm.provision "file", source: "./aliases/.aliases_vagrant", destination: "/home/vagrant/.aliases_vagrant"
+
+  # copy ssh keys to VM
+  if Vagrant::Util::Platform.windows? then
+    config.vm.provision :file, source: "./ssh/id_rsa", destination: "$HOME/.ssh/id_rsa"
+    config.vm.provision :file, source: "./ssh/config", destination: "$HOME/.ssh/config"
+  else
+    config.vm.provision "file", source: "~/.ssh/id_rsa.pub", destination: "$HOME/.ssh/id_rsa.pub"
+    config.vm.provision "file", source: "~/.ssh/id_rsa", destination: "$HOME/.ssh/id_rsa"
+  end
+
+ # Provision using inline shell script
+  config.vm.provision "shell", inline: <<-SHELL
+  apt-get update > /dev/null 2>&1
+  apt-get upgrade -y > /dev/null 2>&1
+
+  # Install certificates, and unzip zsh
+  apt-get install -y ca-certificates unzip zsh ruby zsh-syntax-highlighting tig > /dev/null 2>&1
+
+
+  # set timezone to Europe/Berlin
+  timedatectl set-timezone Europe/Berlin
+
+  if [[ ! -f /home/vagrant/.tigrc ]]; then
+    runuser -l vagrant -c 'echo "set vertical-split = horizontal" >> /home/vagrant/.tigrc'
+  fi
+
+  # GIT
+  if ! which git > /dev/null; then
+    echo "Install git"
+    sudo add-apt-repository ppa:git-core/ppa
+    sudo apt-get install -y git > /dev/null 2>&1
+    git --version
+    git config --global pull.rebase true
+  fi
+
+  # AWS- Vault
+   if ! which aws-vault > /dev/null; then
+    echo "Install AWS- Vault"
+    sudo apt-get install -y aws-vault
+   fi
+  # TF
+  if [[ ! -d /home/vagrant/.tfenv ]]; then
+    echo "Install terraform"
+    git clone https://github.com/kamatama41/tfenv.git /home/vagrant/.tfenv
+    chown -R vagrant:vagrant /home/vagrant/.tfenv
+    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> /home/vagrant/.bash_profile
+    runuser -l vagrant -c '/home/vagrant/.tfenv/bin/tfenv install latest > /dev/null 2>&1'
+    runuser -l vagrant -c '/home/vagrant/.tfenv/bin/tfenv use latest > /dev/null 2>&1'
+    runuser -l vagrant -c '/home/vagrant/.tfenv/bin/tfenv list'
+  fi
+
+  # DOCKER
+  if ! which docker > /dev/null; then
+    echo "Install docker"
+    sudo apt-get install -y docker.io > /dev/null 2>&1
+    sudo usermod -aG docker vagrant
+    docker --version
+  fi
+
+  # docker-compose
+  if ! which docker-compose > /dev/null; then
+    sudo curl -s -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+  fi
+
+  # AWSCLI
+  if ! which aws > /dev/null; then
+    echo "Install AWS-CLI"
+    sudo apt-get install -y python3 python3-pip > /dev/null 2>&1
+    sudo pip3 install awscli > /dev/null 2>&1
+    aws --version
+  fi
+
+  # JDK
+  if ! which java > /dev/null; then
+    echo "Install Java 11"
+    sudo apt-get install -y openjdk-11-jdk > /dev/null 2>&1
+  fi
+
+  # JENV
+  if [[ ! -d /home/vagrant/.jenv ]]; then
+    echo "Install jenv"
+    git clone https://github.com/gcuisinier/jenv.git /home/vagrant/.jenv
+    chown -R vagrant:vagrant /home/vagrant/.jenv
+    echo 'export PATH="$HOME/.jenv/bin:$PATH"' >> /home/vagrant/.bash_profile
+    echo 'eval "$(jenv init -)"' >> /home/vagrant/.bash_profile
+    runuser -l vagrant -c '/home/vagrant/.jenv/bin/jenv add /usr/lib/jvm/java-11-openjdk-amd64'
+  fi
+
+
+  # ADR  Architecture Decision Records
+  if [[ ! -d /home/vagrant/adr-tools-2.2.0 ]]; then
+    echo "Install ADR-Tools"
+    curl -s -L -o - https://github.com/npryce/adr-tools/archive/2.2.0.tar.gz | \
+    tar -zxv -f -
+    echo 'export PATH="$HOME/adr-tools-2.2.0/src:$PATH"' >> /home/vagrant/.bash_profile
+    sudo cp /home/vagrant/adr-tools-2.2.0/autocomplete/adr /etc/bash_completion.d/adr
+    chown -R vagrant:vagrant /home/vagrant/adr-tools-2.2.0
+  fi
+
+  # amazon-ecr-credential-helper
+  if [[ ! -e /usr/local/bin/docker-credential-ecr-login ]]; then
+    echo "Install amazon-ecr-credential-helper"
+    curl -sL https://amazon-ecr-credential-helper-releases.s3.us-east-2.amazonaws.com/0.3.1/linux-amd64/docker-credential-ecr-login -o /usr/local/bin/docker-credential-ecr-login && chmod +x /usr/local/bin/docker-credential-ecr-login
+  fi
+
+   # install dos2unix
+   echo "Installing dos2 unix"
+   sudo apt-get install -y dos2unix
+
+  # include aliases into bash context
+  echo "source ~/.aliases_vagrant" >> /home/vagrant/.bash_profile
+
+  # set ssh key File permissions"
+  if [ -f ~vagrant/.ssh/id_rsa.pub ] ; then chmod 600 ~vagrant/.ssh/id_rsa.pub ; fi
+  if [ -f ~vagrant/.ssh/id_rsa ] ; then chmod 600 ~vagrant/.ssh/id_rsa ; fi
+  SHELL
+end

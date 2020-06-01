@@ -1,0 +1,34 @@
+### IntelliJ IDEA
+.idea
+*.iws
+*.iml
+*.ipr
+
+### Eclipse
+.settings/
+.classpath
+
+### Vagrant
+.vagrant/
+
+*cloudimg-console.log
+config.yaml
+
+### maven
+target/
+log/
+
+### Misc
+.DS_Store
+
+### Terraform
+.terraform/
+terraform.tfstate.backup
+/bin/
+
+### JaCoCo
+.target
+
+## ssh
+vagrant-run/ssh/known_hosts
+
