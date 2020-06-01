@@ -1,4 +1,5 @@
 # Developer setup
+This project is to help provision a system which will have a uniform development environment amongst all the developers.
 
 ## Getting Started
 Currently this setup is meant to simplify setting up a developer's environment in case you have a mixed setup (win/linux/osx).
