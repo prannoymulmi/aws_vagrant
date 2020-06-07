@@ -48,6 +48,7 @@ It is better if the line feeds are in linux so that there are no stupid problems
 ```
 git config --global core.autocrlf input
 git config --global core.eol lf
+git config --global pull.rebase true
 ```
 
 ```
