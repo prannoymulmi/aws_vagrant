@@ -83,7 +83,7 @@ Vagrant.configure(2) do |config|
   config.vm.synced_folder vagrant_config['aws_vagrant_project_source_path'], vagrant_config['aws_vagrant_project_destination_path']
 
   config.vm.provision "file", source: "./aliases/.aliases_vagrant", destination: "/home/vagrant/.aliases_vagrant"
-  config.vm.provision "file", source: "./provisioning/.zshrc", destination: "~/.zshrc"
+  #config.vm.provision "file", source: "./provisioning/.zshrc", destination: "~/.zshrc"
 
   # copy ssh keys to VM
   if Vagrant::Util::Platform.windows? then
@@ -99,28 +99,8 @@ Vagrant.configure(2) do |config|
   apt-get update > /dev/null 2>&1
   apt-get upgrade -y > /dev/null 2>&1
 
-  # Added zsh shell.
-  apt-get install zsh
-  wget --no-check-certificate https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | sh
-
-
- # Change the oh my zsh default theme.
-   sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="arrow"/g' ~/.zshrc
-
-# Changing shell
-  chsh -s /bin/zsh vagrant
-
-
-
-
-  apt-get install wget git
-  cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
-  source ~/.zshrc
-  apt-get install update-manager-core; do-release-upgrade
-  zsh
-
   # Install certificates, and unzip zsh
-  apt-get install -y ca-certificates unzip ruby zsh-syntax-highlighting tig > /dev/null 2>&1
+  apt-get install -y ca-certificates unzip> /dev/null 2>&1
 
 
   # set timezone to Europe/Berlin
@@ -142,7 +122,10 @@ Vagrant.configure(2) do |config|
   # AWS- Vault
    if ! which aws-vault > /dev/null; then
     echo "Install AWS- Vault"
-    sudo apt-get install -y aws-vault
+    curl -Lo aws-vault https://github.com/99designs/aws-vault/releases/download/$(curl -s https://api.github.com/repos/99designs/aws-vault/releases/latest | grep tag_name | cut -d '"' -f 4)/aws-vault-linux-amd64
+    chmod +x ./aws-vault
+    sudo mv ./aws-vault /usr/local/bin/
+    #sudo apt-get install -y aws-vault
    fi
   # TF
   if [[ ! -d /home/vagrant/.tfenv ]]; then
