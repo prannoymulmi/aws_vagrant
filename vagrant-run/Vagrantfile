@@ -119,6 +119,12 @@ Vagrant.configure(2) do |config|
     git config --global pull.rebase true
   fi
 
+  # Install NodeJS & TypeScript
+  echo "Install NodeJS & TypeScript"
+  apt-get install -y npm
+  npm i -g typescript
+  npm i -g ts-node
+
   # AWS- Vault
    if ! which aws-vault > /dev/null; then
     echo "Install AWS- Vault"
