@@ -125,6 +125,18 @@ Vagrant.configure(2) do |config|
   npm i -g typescript
   npm i -g ts-node
 
+  # install aws-nuke
+  EXPECTED_VERSION="2.14.0"
+  INSTALLED_VERSION=$(aws-nuke --version 2>&1)
+  if [ $? -ne 0  -o "$INSTALLED_VERSION" != "$CURRENT_VERSION" ]; then
+    echo "Install aws-nuke Version: $EXPECTED_VERSION"
+    curl -s -L -o - https://github.com/rebuy-de/aws-nuke/releases/download/v${EXPECTED_VERSION}/aws-nuke-v${EXPECTED_VERSION}-linux-amd64.tar.gz | \
+    tar -xzv -f  -  -C /usr/local/bin --strip-components 1
+    mv /usr/local/bin/aws-nuke* /usr/local/bin/aws-nuke
+    chown -R vagrant: /usr/local/bin/aws-nuke && chmod u+x /usr/local/bin/aws-nuke
+  fi
+
+
   # AWS- Vault
    if ! which aws-vault > /dev/null; then
     echo "Install AWS- Vault"
